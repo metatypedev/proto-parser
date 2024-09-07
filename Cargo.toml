@@ -1,0 +1,15 @@
+[package]
+name = "proto-parser"
+version = "0.1.0"
+edition = "2021"
+authors = ["Stepan Koltsov <stepan.koltsov@gmail.com>"]
+license = "MIT"
+homepage = "https://github.com/stepancheg/rust-protobuf/tree/master/protobuf-parse/"
+repository = "https://github.com/stepancheg/rust-protobuf/tree/master/protobuf-parse/"
+
+[dependencies]
+anyhow = "1.0.86"
+indexmap = "2.5.0"
+protobuf = "3.5.1"
+protobuf-support = "3.5.1"
+thiserror = "1.0.63"
