@@ -420,7 +420,7 @@ impl<'a> Lexer<'a> {
             if self.next_char_if_eq('.') {
                 self.next_decimal_digits()?;
                 self.next_exponent_opt()?;
-            } else if (self.next_exponent_opt()?).is_none() {
+            } else if self.next_exponent_opt()?.is_none() {
                 return Err(LexerError::IncorrectFloatLit);
             }
         }
@@ -444,7 +444,7 @@ impl<'a> Lexer<'a> {
                     'x' => {
                         let d1 = self.next_hex_digit()? as u8;
                         let d2 = self.next_hex_digit()? as u8;
-                        Ok(((d1 << 4) | d2) as u8)
+                        Ok((d1 << 4) | d2)
                     }
                     d if ('0'..='7').contains(&d) => {
                         let mut r = d as u8 - b'0';

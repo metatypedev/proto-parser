@@ -20,9 +20,7 @@ use protobuf_ident::ProtobufIdent;
 use protobuf_path::ProtobufPath;
 use protobuf_rel_path::ProtobufRelPath;
 
-pub use convert::file_descriptor;
-
-mod case_convert;
+pub mod case_convert;
 pub mod convert;
 pub mod lexer;
 pub mod model;

@@ -47,7 +47,7 @@ enum OptionResolverError {
     #[error("unknown enum value: {0}")]
     UnknownEnumValue(String),
     #[error("unsupported extension type: {0} {1} {2}")]
-    UnsupportedExtensionType(String, String, model::ProtobufConstant),
+    UnsupportedExtensionType(String, String, ProtobufConstant),
     #[error("builtin option {0} not found for options {1}")]
     BuiltinOptionNotFound(String, String),
     #[error("builtin option {0} points to a non-singular field of {1}")]
@@ -165,11 +165,11 @@ impl LookupScopeUnion2 {
 }
 
 pub trait ProtobufOptions {
-    fn by_name(&self, name: &str) -> Option<&model::ProtobufConstant>;
+    fn by_name(&self, name: &str) -> Option<&ProtobufConstant>;
 
     fn _by_name_bool(&self, name: &str) -> anyhow::Result<Option<bool>> {
         match self.by_name(name) {
-            Some(model::ProtobufConstant::Bool(b)) => Ok(Some(*b)),
+            Some(ProtobufConstant::Bool(b)) => Ok(Some(*b)),
             Some(c) => Err(OptionResolverError::WrongOptionType("bool", c.to_string()).into()),
             None => Ok(None),
         }
@@ -177,7 +177,7 @@ pub trait ProtobufOptions {
 
     fn by_name_string(&self, name: &str) -> anyhow::Result<Option<String>> {
         match self.by_name(name) {
-            Some(model::ProtobufConstant::String(s)) => s.decode_utf8().map(Some).map_err(|err| anyhow!(err)),
+            Some(ProtobufConstant::String(s)) => s.decode_utf8().map(Some).map_err(|err| anyhow!(err)),
             Some(c) => Err(OptionResolverError::WrongOptionType("string", c.to_string()).into()),
             None => Ok(None),
         }
@@ -185,7 +185,7 @@ pub trait ProtobufOptions {
 }
 
 impl<'a> ProtobufOptions for &'a [model::ProtobufOption] {
-    fn by_name(&self, name: &str) -> Option<&model::ProtobufConstant> {
+    fn by_name(&self, name: &str) -> Option<&ProtobufConstant> {
         let option_name = ProtobufOptionName::simple(name);
         for model::ProtobufOption { name, value } in *self {
             if name == &option_name {
@@ -306,9 +306,9 @@ impl<'a> OptionResolver<'a> {
         let field = self.find_extension_by_path(scope, field_name)?;
         if ProtobufAbsPath::new(field.proto().extendee()) != expected_extendee {
             return Err(OptionResolverError::WrongExtensionType(
-                format!("{}", field_name),
-                format!("{}", field.proto().extendee()),
-                format!("{}", expected_extendee),
+                field_name.to_string(),
+                field.proto().extendee().to_string(),
+                expected_extendee.to_string()
             )
             .into());
         }
@@ -389,7 +389,7 @@ impl<'a> OptionResolver<'a> {
                             "parsing custom option `{}` value `{}` at `{}`",
                             option_name, option_value, scope
                         ));
-                        return Err(e.into());
+                        return Err(e);
                     }
                 };
 
@@ -534,18 +534,18 @@ impl<'a> OptionResolver<'a> {
     fn option_value_to_unknown_value(
         &self,
         field_type: &TypeResolved,
-        value: &model::ProtobufConstant,
+        value: &ProtobufConstant,
         option_name_for_diag: &str,
     ) -> anyhow::Result<UnknownValue> {
         match value {
-            &model::ProtobufConstant::Bool(b) => {
+            &ProtobufConstant::Bool(b) => {
                 if field_type != &TypeResolved::Bool {
                     {}
                 } else {
                     return Ok(UnknownValue::Varint(if b { 1 } else { 0 }));
                 }
             }
-            &model::ProtobufConstant::U64(v) => match field_type {
+            &ProtobufConstant::U64(v) => match field_type {
                 TypeResolved::Fixed64 => return Self::fixed64(v),
                 TypeResolved::Sfixed64 => return Self::sfixed64(v),
                 TypeResolved::Fixed32 => return Self::fixed32(v),
@@ -560,7 +560,7 @@ impl<'a> OptionResolver<'a> {
                 TypeResolved::Double => return Ok(UnknownValue::double(v as f64)),
                 _ => {}
             },
-            &model::ProtobufConstant::I64(v) => match field_type {
+            &ProtobufConstant::I64(v) => match field_type {
                 TypeResolved::Fixed64 => return Self::fixed64(v),
                 TypeResolved::Sfixed64 => return Self::sfixed64(v),
                 TypeResolved::Fixed32 => return Self::fixed32(v),
@@ -575,7 +575,7 @@ impl<'a> OptionResolver<'a> {
                 TypeResolved::Double => return Ok(UnknownValue::double(v as f64)),
                 _ => {}
             },
-            &model::ProtobufConstant::F64(f) => match field_type {
+            &ProtobufConstant::F64(f) => match field_type {
                 TypeResolved::Float => return Ok(UnknownValue::float(f as f32)),
                 TypeResolved::Double => return Ok(UnknownValue::double(f)),
                 TypeResolved::Fixed32 => return Ok(UnknownValue::Fixed32(f as u32)),
@@ -592,67 +592,62 @@ impl<'a> OptionResolver<'a> {
                 TypeResolved::Sint32 => return Ok(UnknownValue::sint32(f as i32)),
                 _ => {}
             },
-            &model::ProtobufConstant::String(ref s) => match field_type {
+            ProtobufConstant::String(ref s) => match field_type {
                 TypeResolved::String => {
                     return Ok(UnknownValue::LengthDelimited(s.decode_utf8()?.into_bytes()))
                 }
                 TypeResolved::Bytes => return Ok(UnknownValue::LengthDelimited(s.decode_bytes()?)),
                 _ => {}
             },
-            model::ProtobufConstant::Ident(ident) => match &field_type {
-                TypeResolved::Enum(e) => {
-                    let e = self
-                        .resolver
-                        .find_enum_by_abs_name(e)
-                        .map_err(OptionResolverError::OtherError)?;
-                    let n = match e
-                        .values
-                        .iter()
-                        .find(|v| v.name == format!("{}", ident))
-                        .map(|v| v.number)
-                    {
-                        Some(n) => n,
-                        None => {
-                            return Err(
-                                OptionResolverError::UnknownEnumValue(ident.to_string()).into()
-                            )
-                        }
-                    };
-                    return Ok(UnknownValue::int32(n));
-                }
-                _ => {}
+            ProtobufConstant::Ident(ident) => if let TypeResolved::Enum(e) = &field_type {
+                let e = self
+                    .resolver
+                    .find_enum_by_abs_name(e)
+                    .map_err(OptionResolverError::OtherError)?;
+                let n = match e
+                    .values
+                    .iter()
+                    .find(|v| v.name == format!("{}", ident))
+                    .map(|v| v.number)
+                {
+                    Some(n) => n,
+                    None => {
+                        return Err(
+                            OptionResolverError::UnknownEnumValue(ident.to_string()).into()
+                        )
+                    }
+                };
+                return Ok(UnknownValue::int32(n));
             },
-            model::ProtobufConstant::Message(mo) => {
+            ProtobufConstant::Message(mo) => {
                 return self.option_value_message_to_unknown_value(
-                    &field_type,
+                    field_type,
                     mo,
                     option_name_for_diag,
                 );
             }
         };
 
-        Err(match field_type {
-            _ => OptionResolverError::UnsupportedExtensionType(
-                option_name_for_diag.to_owned(),
-                format!("{:?}", field_type),
-                value.clone(),
-            )
-            .into(),
-        })
+        Err(OptionResolverError::UnsupportedExtensionType(
+            option_name_for_diag.to_owned(),
+            format!("{:?}", field_type),
+            value.clone(),
+        )
+        .into())
     }
 
     fn option_value_field_to_unknown_value(
         &self,
         scope: &ProtobufAbsPath,
-        value: &model::ProtobufConstant,
+        value: &ProtobufConstant,
         name: &str,
         field_type: &model::FieldType,
         option_name_for_diag: &str,
     ) -> anyhow::Result<UnknownValue> {
-        let field_type = self.resolver.field_type(&scope, name, field_type)?;
-        Ok(self
+        let field_type = self.resolver.field_type(scope, name, field_type)?;
+        self
             .option_value_to_unknown_value(&field_type, value, option_name_for_diag)
-            .context("parsing custom option value")?)
+            .context("parsing custom option value")
     }
 
     fn custom_option_builtin<M>(
@@ -685,7 +680,7 @@ impl<'a> OptionResolver<'a> {
                     options,
                     option_value.as_type(field.singular_runtime_type())?,
                 );
-                return Ok(());
+                Ok(())
             }
             None => {
                 return Err(OptionResolverError::BuiltinOptionNotFound(
@@ -815,12 +810,12 @@ impl<'a> OptionResolver<'a> {
         service_proto.options = self.service_options(&service_model.options)?.into();
 
         for service_method_model in &service_model.methods {
-            let mut method_proto = service_proto
+            let method_proto: &mut MethodDescriptorProto = service_proto
                 .method
                 .iter_mut()
                 .find(|method| method.name() == service_method_model.name)
                 .unwrap();
-            self.method(&mut method_proto, service_method_model)?;
+            self.method(method_proto, service_method_model)?;
         }
 
         Ok(())
@@ -847,12 +842,12 @@ impl<'a> OptionResolver<'a> {
         enum_proto.options = self.enum_options(scope, &enum_model.options)?.into();
 
         for enum_value_model in &enum_model.values {
-            let mut enum_value_proto = enum_proto
+            let enum_value_proto = enum_proto
                 .value
                 .iter_mut()
                 .find(|v| v.name() == enum_value_model.name)
                 .unwrap();
-            self.enum_value(scope, &mut enum_value_proto, enum_value_model)?;
+            self.enum_value(scope, enum_value_proto, enum_value_model)?;
         }
 
         Ok(())
@@ -887,15 +882,15 @@ impl<'a> OptionResolver<'a> {
         message_proto.options = self.message_options(scope, &message_model.options)?.into();
 
         let mut nested_scope = scope.to_owned();
-        nested_scope.push_simple(ProtobufIdentRef::new(&message_proto.name()));
+        nested_scope.push_simple(ProtobufIdentRef::new(message_proto.name()));
 
         for field_model in &message_model.regular_fields_including_in_oneofs() {
-            let mut field_proto = message_proto
+            let field_proto: &mut FieldDescriptorProto = message_proto
                 .field
                 .iter_mut()
                 .find(|field| field.name() == field_model.name)
                 .unwrap();
-            self.field(&nested_scope, &mut field_proto, field_model)?;
+            self.field(&nested_scope, field_proto, field_model)?;
         }
         for field_model in &message_model.extensions {
             let field_proto = message_proto

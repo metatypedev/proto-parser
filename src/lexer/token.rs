@@ -15,23 +15,25 @@ pub enum Token {
     StrLit(StrLit),
 }
 
+use Token::*;
+
 impl Token {
     /// Back to original
     pub fn format(&self) -> String {
         match self {
-            &Token::Ident(ref s) => s.clone(),
-            &Token::Symbol(c) => c.to_string(),
-            &Token::IntLit(ref i) => i.to_string(),
-            &Token::StrLit(ref s) => s.quoted(),
-            &Token::FloatLit(ref f) => f.to_string(),
-            &Token::JsonNumber(ref f) => f.to_string(),
+            Ident(ref s) => s.clone(),
+            Symbol(c) => c.to_string(),
+            IntLit(ref i) => i.to_string(),
+            StrLit(ref s) => s.quoted(),
+            FloatLit(ref f) => f.to_string(),
+            JsonNumber(ref f) => f.to_string(),
         }
     }
 
     pub fn to_num_lit(&self) -> LexerResult<NumLit> {
         match self {
-            &Token::IntLit(i) => Ok(NumLit::U64(i)),
-            &Token::FloatLit(f) => Ok(NumLit::F64(f)),
+            IntLit(i) => Ok(NumLit::U64(*i)),
+            FloatLit(f) => Ok(NumLit::F64(*f)),
             _ => Err(LexerError::IncorrectInput),
         }
     }

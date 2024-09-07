@@ -53,7 +53,7 @@ impl<'a> LookupScope<'a> {
         }
     }
 
-    fn messages(&self) -> &'a [model::WithLoc<model::Message>] {
+    fn messages(&self) -> &'a [WithLoc<model::Message>] {
         match self {
             LookupScope::File(file) => &file.messages,
             LookupScope::Message(message, _) => &message.messages,
@@ -172,12 +172,12 @@ impl<'a> TypeResolver<'a> {
         name: &ProtobufPath,
     ) -> anyhow::Result<WithFullName<MessageOrEnum>> {
         match name {
-            ProtobufPath::Abs(name) => Ok(self.find_message_or_enum_by_abs_name(&name)?),
+            ProtobufPath::Abs(name) => Ok(self.find_message_or_enum_by_abs_name(name)?),
             ProtobufPath::Rel(name) => {
                 // find message or enum in current package
                 for p in scope.self_and_parents() {
                     let mut fq = p.to_owned();
-                    fq.push_relative(&name);
+                    fq.push_relative(name);
                     if let Ok(me) = self.find_message_or_enum_by_abs_name(&fq) {
                         return Ok(me);
                     }
