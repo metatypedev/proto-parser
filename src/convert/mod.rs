@@ -17,8 +17,8 @@ use crate::{
 };
 
 use self::option_resolver::{OptionResolver, ProtobufOptions};
-pub use self::type_resolver::TypeResolver;
 use self::type_resolver::MessageOrEnum;
+pub use self::type_resolver::TypeResolver;
 
 mod option_resolver;
 mod type_resolver;
@@ -174,10 +174,10 @@ impl<'a> Resolver<'a> {
         output.set_name(Resolver::map_entry_name_for_field_name(field_name).into_string());
         output
             .field
-            .push(self.map_entry_field(&scope, "key", 1, key)?);
+            .push(self.map_entry_field(scope, "key", 1, key)?);
         output
             .field
-            .push(self.map_entry_field(&scope, "value", 2, value)?);
+            .push(self.map_entry_field(scope, "value", 2, value)?);
 
         Ok(output)
     }
@@ -230,10 +230,10 @@ impl<'a> Resolver<'a> {
                     });
                 }
                 model::FieldType::Group(model::Group {
-                                            name: group_name,
-                                            fields,
-                                            ..
-                                        }) => {
+                    name: group_name,
+                    fields,
+                    ..
+                }) => {
                     let message = self.group_message(&nested_scope, group_name, fields)?;
                     nested_messages.push(model::WithLoc {
                         t: message,
@@ -494,9 +494,9 @@ impl<'a> Resolver<'a> {
                 TypeResolved::Message(type_name)
             }
             model::FieldType::Group(model::Group {
-                                        name: ref group_name,
-                                        ..
-                                    }) => {
+                name: ref group_name,
+                ..
+            }) => {
                 let mut type_name = scope.to_owned();
                 type_name.push_simple(ProtobufIdentRef::new(group_name));
                 TypeResolved::Group(type_name)

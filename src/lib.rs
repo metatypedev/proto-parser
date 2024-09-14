@@ -1,13 +1,15 @@
 use std::ops::RangeInclusive;
 
-use lexer::{
-    impl_lexer::{LexerError, ParserLanguage},
+use protobuf_support::lexer::{
     int,
-    numlit::NumLit,
-    strlit::StrLitDecodeError,
+    lexer_impl::LexerError,
+    num_lit::NumLit,
+    parser_language::ParserLanguage,
+    str_lit::StrLitDecodeError,
     token::Token,
     tokenizer::{Tokenizer, TokenizerError},
 };
+
 use model::{
     AnyTypeUrl, EnumValue, Enumeration, Extension, Field, FieldOrOneOf, FieldType, FileDescriptor,
     Group, ImportVis, Message, Method, OneOf, ProtobufConstant, ProtobufConstantMessage,
@@ -22,7 +24,6 @@ use protobuf_rel_path::ProtobufRelPath;
 
 pub mod case_convert;
 pub mod convert;
-pub mod lexer;
 pub mod model;
 pub mod path;
 pub mod proto_path;
@@ -410,7 +411,7 @@ impl<'a> Parser<'a> {
         }
 
         if let Some(r) = self.tokenizer.next_token_if_map(|token| match token {
-            &Token::StrLit(ref s) => Some(ProtobufConstant::String(s.clone())),
+            Token::StrLit(ref s) => Some(ProtobufConstant::String(s.clone())),
             _ => None,
         })? {
             return Ok(r);
@@ -588,7 +589,7 @@ impl<'a> Parser<'a> {
             ("float", FieldType::Float),
             ("double", FieldType::Double),
         ];
-        for &(ref n, ref t) in simple {
+        for (n, ref t) in simple {
             if self.tokenizer.next_ident_if_eq(n)? {
                 return Ok(t.clone());
             }

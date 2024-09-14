@@ -6,13 +6,11 @@ use std::ops::{Deref, RangeInclusive};
 use indexmap::IndexMap;
 use protobuf::reflect::{ReflectValueBox, RuntimeType};
 
+use protobuf_support::lexer::{float::format_protobuf_float, loc::Loc, str_lit::StrLit};
+
 use crate::{
-    lexer::{float::format_protobuf_float, loc::Loc, strlit::StrLit},
-    proto_path::ProtoPathBuf,
-    protobuf_abs_path::ProtobufAbsPath,
-    protobuf_ident::ProtobufIdent,
-    protobuf_path::ProtobufPath,
-    Parser, ParserErrorWithLocation, Syntax,
+    proto_path::ProtoPathBuf, protobuf_abs_path::ProtobufAbsPath, protobuf_ident::ProtobufIdent,
+    protobuf_path::ProtobufPath, Parser, ParserErrorWithLocation, Syntax,
 };
 
 #[derive(thiserror::Error, Debug)]
