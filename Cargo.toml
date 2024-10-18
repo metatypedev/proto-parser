@@ -9,7 +9,7 @@ repository = "https://github.com/stepancheg/rust-protobuf/tree/master/protobuf-p
 
 [dependencies]
 anyhow = "1.0.86"
-indexmap = "2.2.6"
-protobuf = "3.5.1"
-protobuf-support = "3.5.1"
-thiserror = "1.0.61"
+indexmap = "2.6.0"
+protobuf = "3.6.0"
+protobuf-support = "3.6.0"
+thiserror = "1.0.64"
