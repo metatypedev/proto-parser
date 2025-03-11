@@ -10,6 +10,6 @@ repository = "https://github.com/stepancheg/rust-protobuf/tree/master/protobuf-p
 [dependencies]
 anyhow = "1.0.86"
 indexmap = "2.6.0"
-protobuf = "3.6.0"
+protobuf = "3.7.2"
 protobuf-support = "3.6.0"
 thiserror = "1.0.64"
